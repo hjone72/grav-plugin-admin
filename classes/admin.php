@@ -5,6 +5,7 @@ use DateTime;
 use Grav\Common\Data;
 use Grav\Common\File\CompiledYamlFile;
 use Grav\Common\GPM\GPM;
+use Grav\Common\GPM\Response;
 use Grav\Common\Grav;
 use Grav\Common\Language\LanguageCodes;
 use Grav\Common\Page\Page;
@@ -22,6 +23,8 @@ use RocketTheme\Toolbox\ResourceLocator\UniformResourceLocator;
 use RocketTheme\Toolbox\Session\Message;
 use RocketTheme\Toolbox\Session\Session;
 use Symfony\Component\Yaml\Yaml;
+use Composer\Semver\Semver;
+use PicoFeed\Reader\Reader;
 
 define('LOGIN_REDIRECT_COOKIE', 'grav-login-redirect');
 
@@ -1030,44 +1033,36 @@ class Admin
     {
         static $guess;
 
+        $date_formats = [
+            'm/d/y',
+            'm/d/Y',
+            'n/d/y',
+            'n/d/Y',
+            'd-m-Y',
+            'd-m-y',
+        ];
+
+        $time_formats = [
+            'H:i',
+            'G:i',
+            'h:ia',
+            'g:ia'
+        ];
+
         if (!isset($guess[$date])) {
-            if (Utils::contains($date, '/')) {
-                if ($this->validateDate($date, 'm/d/Y H:i')) {
-                    $guess[$date] = 'm/d/Y H:i';
-                } elseif ($this->validateDate($date, 'm/d/y H:i')) {
-                    $guess[$date] = 'm/d/y H:i';
-                } elseif ($this->validateDate($date, 'm/d/Y G:i')) {
-                    $guess[$date] = 'm/d/Y G:i';
-                } elseif ($this->validateDate($date, 'm/d/y G:i')) {
-                    $guess[$date] = 'm/d/y G:i';
-                } elseif ($this->validateDate($date, 'm/d/Y h:ia')) {
-                    $guess[$date] = 'm/d/Y h:ia';
-                } elseif ($this->validateDate($date, 'm/d/y h:ia')) {
-                    $guess[$date] = 'm/d/y h:ia';
-                } elseif ($this->validateDate($date, 'm/d/Y g:ia')) {
-                    $guess[$date] = 'm/d/Y g:ia';
-                } elseif ($this->validateDate($date, 'm/d/y g:ia')) {
-                    $guess[$date] = 'm/d/y g:ia';
+            foreach ($date_formats as $date_format) {
+                foreach ($time_formats as $time_format) {
+                    if ($this->validateDate($date, "$date_format $time_format")) {
+                        $guess[$date] = "$date_format $time_format";
+                        break 2;
+                    } elseif ($this->validateDate($date, "$time_format $date_format")) {
+                        $guess[$date] = "$time_format $date_format";
+                        break 2;
+                    }
                 }
-            } elseif (Utils::contains($date, '-')) {
-                if ($this->validateDate($date, 'd-m-Y H:i')) {
-                    $guess[$date] = 'd-m-Y H:i';
-                } elseif ($this->validateDate($date, 'd-m-y H:i')) {
-                    $guess[$date] = 'd-m-y H:i';
-                } elseif ($this->validateDate($date, 'd-m-Y G:i')) {
-                    $guess[$date] = 'd-m-Y G:i';
-                } elseif ($this->validateDate($date, 'd-m-y G:i')) {
-                    $guess[$date] = 'd-m-y G:i';
-                } elseif ($this->validateDate($date, 'd-m-Y h:ia')) {
-                    $guess[$date] = 'd-m-Y h:ia';
-                } elseif ($this->validateDate($date, 'd-m-y h:ia')) {
-                    $guess[$date] = 'd-m-y h:ia';
-                } elseif ($this->validateDate($date, 'd-m-Y g:ia')) {
-                    $guess[$date] = 'd-m-Y g:ia';
-                } elseif ($this->validateDate($date, 'd-m-y g:ia')) {
-                    $guess[$date] = 'd-m-y g:ia';
-                }
-            } else {
+            }
+
+            if (!isset($guess[$date])) {
                 $guess[$date] = 'd-m-Y H:i';
             }
         }
@@ -1194,6 +1189,72 @@ class Admin
         $this->permissions = array_merge($this->permissions, $permissions);
     }
 
+    public function processNotifications($notifications)
+    {
+        // Sort by date
+        usort($notifications, function($a, $b) {
+            return strcmp($a->date, $b->date);
+        });
+
+        $notifications = array_reverse($notifications);
+
+        // Make adminNicetimeFilter available
+        require_once(__DIR__ . '/../twig/AdminTwigExtension.php');
+        $adminTwigExtension = new AdminTwigExtension();
+
+        $filename = $this->grav['locator']->findResource('user://data/notifications/' . $this->grav['user']->username . YAML_EXT, true, true);
+        $read_notifications = CompiledYamlFile::instance($filename)->content();
+
+        $notifications_processed = [];
+        foreach ($notifications as $key => $notification) {
+            $is_valid = true;
+
+            if (in_array($notification->id, $read_notifications)) {
+                $notification->read = true;
+            }
+
+            if ($is_valid && isset($notification->permissions) && !$this->authorize($notification->permissions)) {
+                $is_valid = false;
+            }
+
+            if ($is_valid && isset($notification->dependencies)) {
+                foreach ($notification->dependencies as $dependency => $constraints) {
+                    if ($dependency == 'grav') {
+                        if (!Semver::satisfies(GRAV_VERSION, $constraints)) {
+                            $is_valid = false;
+                        }
+                    } else {
+                        $packages = array_merge($this->plugins()->toArray(), $this->themes()->toArray());
+                        if (!isset($packages[$dependency])) {
+                            $is_valid = false;
+                        } else {
+                            $version = $packages[$dependency]['version'];
+                            if (!Semver::satisfies($version, $constraints)) {
+                                $is_valid = false;
+                            }
+                        }
+                    }
+
+                    if (!$is_valid) {
+                        break;
+                    }
+                }
+            }
+
+            if ($is_valid) {
+                $notifications_processed[] = $notification;
+            }
+        }
+
+        // Process notifications
+        $notifications_processed = array_map(function($notification) use ($adminTwigExtension) {
+            $notification->date = $adminTwigExtension->adminNicetimeFilter($notification->date);
+            return $notification;
+        }, $notifications_processed);
+
+        return $notifications_processed;
+    }
+
     public function findFormFields($type, $fields, $found_fields = [])
     {
         foreach ($fields as $key => $field) {
@@ -1252,6 +1313,44 @@ class Admin
         $path = str_replace($matches[0], rtrim($page->relativePagePath(), '/'), $path);
 
         return $path . $basename;
+    }
+
+    /**
+     * Get https://getgrav.org news feed
+     *
+     * @return mixed
+     */
+    public function getFeed()
+    {
+        $feed_url = 'https://getgrav.org/blog.atom';
+
+        $body = Response::get($feed_url);
+
+        $reader = new Reader();
+        $parser = $reader->getParser($feed_url, $body, 'utf-8');
+
+        $feed = $parser->execute();
+
+        return $feed;
+
+    }
+
+    public function cleanContent($content)
+    {
+        $string = strip_tags($content);
+        $string = htmlspecialchars_decode($string, ENT_QUOTES);
+        $string = str_replace("\n", ' ', $string);
+        return trim($string);
+    }
+
+    public static function getTempDir()
+    {
+        try {
+            $tmp_dir = Grav::instance()['locator']->findResource('tmp://', true, true);
+        } catch (\Exception $e) {
+            $tmp_dir = Grav::instance()['locator']->findResource('cache://', true, true) . '/tmp';
+        }
+        return $tmp_dir;
     }
 
 }

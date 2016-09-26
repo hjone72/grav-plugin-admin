@@ -1,3 +1,72 @@
+# v1.2.2
+## 09/08/2016
+
+1. [](#bugfix)
+    * Fix [#767](https://github.com/getgrav/grav-plugin-admin/issues/739) Add styling for new HTML5 input field types
+    * Fix issue with checking the package dependencies when more than one package is being inspected
+
+# v1.2.1
+## 09/07/2016
+
+1. [](#bugfix)
+    * Fixed `tmp://` stream issue with Admin updated to 1.2 before Grav updated 1.1.4
+
+# v1.2.0
+## 09/07/2016
+
+1. [](#new)
+    * All new `file` field. All files get uploaded via Ajax and are stored upon Save. This improves the Save task tremendously as now there is no longer the need of waiting for the files to finish uploading. Fully backward compatible, `file` field now includes also a `limit` and `filesize` option in the blueprints. The former determines how many files are allowed to be uploaded when in combination with `multiple: true` (default: 10), the latter determines the file size limit (in MB) allowed for each file (default: 5MB)
+    * Added a new `filepicker` field, which allows to pick any file from an ajax-powered select box. The `pagemediaselect` field now internally uses the `filepicker` field to live-reload the available files, and to show image previews.
+1. [](#improved)
+    * Better error handling for 500 Internal Server Errors, when Fetch fails
+    * Various notifications style and other CSS fixes
+    * More language strings added
+    * Added `clear-tmp` to cache clear drop-down
+    * Unified JSON twig templates
+    * Better error handling for 500 Internal Server Errors, when Fetch fails.
+    * Updated vendor Libraries
+1. [](#bugfix)
+    * Curl fix for invalid cert errors with News Feed
+    * Avoid requiring `admin.super` for ajax calls [#739](https://github.com/getgrav/grav-plugin-admin/issues/739)
+    * Fix showing HTML in notifications, in the feed
+    * Fixed broken page type filtering
+    * Fixed `beforeunload` event not prompting to offer the choice to stay on the page in case of unsaved changes
+    * Fixed click-away detection for preventing loss of changes, that would get ignored in some circumstances (ie, from modal confirmation)
+    * Fixed issue with `_json` elements where nested fields merging would get stored in an unexpected way
+    * Fixed composer dependencies missing error message
+
+# v1.1.4
+## 08/14/2016
+
+1. [](#bugfix)
+    * Fixed Firefox News Feed dashboard widget layout
+
+# v1.1.3
+## 08/10/2016
+
+1. [](#new)
+    * Admin notifications system.  Admin will pull and cache notifications.  This will be used to announce important updates, security vulnerabilities, and general interest news.
+    * Ability to disable widgets in the dashboard
+    * Added news feed widget to the dashboard
+1. [](#improved)
+    * Updated FontAwesome to v4.6.3
+    * Use new List functionality for Media Configuration
+    * Get fresh media list for `Controller::getListMedia()` rather that cache so always latest.
+    * Add translation strings for the new system.force_ssl option
+    * Reworked List UI to better handle drag & drop sort. To sort it is now required to use the left drag handle [#724](https://github.com/getgrav/grav-plugin-admin/issues/724)
+    * Lists now features a new YAML option `controls: [top|bottom|both]` (default: bottom) which will display the "Add Item" button at the Top and/or Bottom position relative to the list. When the Top button is pressed, a new item will be added at the beginning of the list, when the Bottom button is pressed, a new item will be appended to the list.
+    * Lists now features two new YAML options `sortby: [field]` (default: disabled) and `sortby_dir: [asc|desc]` (default: asc) which will display a new Sorting button in the list allowing to automatically reindex the collection based on the given sort field set.
+    * Lists now features a new YAML option `collapsed: [true|false]` (default: false) and a new UI/UX that allows for collapsing / expanding collection items, allowing to better managing long lists of items. It is advised to always put as first field the most significant one, so that when a list is collapsed it can be still easily browsed.
+    * It is now possible to sort Array fields via drag & drop [#950](https://github.com/getgrav/grav/issues/950)
+1. [](#bugfix)
+    * Fixed issue in Admin favicon URL [#704](https://github.com/getgrav/grav-plugin-admin/issues/704)
+    * Fixed issue in `selfupgrade` where the package would get downloaded in the wrong destination
+    * Hide tab when user is not authorized to access it [#712](https://github.com/getgrav/grav-plugin-admin/issues/712)
+    * Fixed Lists issue when reindexing, causing Radio fields to potentially lose their `checked` status
+    * Avoid overwriting a file when uploaded with the same filename through the Admin blueprint `file` field type if `avoid_overwriting` is enabled on the field
+    * Fixed issue with Array field in `value_only` mode, improperly displaying the key when no value was set
+    * Translate the description of a blueprint field [#729](https://github.com/getgrav/grav-plugin-admin/issues/729)
+
 # v1.1.2
 ## 07/16/2016
 
@@ -9,13 +78,13 @@
     * Check for null payload before going on [#526](https://github.com/getgrav/grav-plugin-admin/issues/526)
     * Redraw Dashboard Charts when collapsing/expanding the sidebar
     * Fix for `cache/compiled` errors resulting from page media uploads [getgrav/grav#938](https://github.com/getgrav/grav/issues/938)
-    
+
 # v1.1.1
 ## 07/14/2016
 
 1. [](#bugfix)
     * Fixed issue with forms causing creation of new pages not to work [#698](https://github.com/getgrav/grav-plugin-admin/issues/698) and [getgrav/grav#934](https://github.com/getgrav/grav/issues/934)
-    
+
 # v1.1.0
 ## 07/14/2016
 
