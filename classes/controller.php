@@ -263,8 +263,7 @@ class AdminController
      */
     protected function taskLogin()
     {
-        $this->data['username'] = strip_tags(strtolower($this->data['username']));
-        if ($this->admin->authenticate($this->data, $this->post)) {
+        if ($this->admin->authenticate($this->post)) {
             // should never reach here, redirects first
         } else {
             $this->admin->setMessage($this->admin->translate('PLUGIN_ADMIN.LOGIN_FAILED'), 'error');

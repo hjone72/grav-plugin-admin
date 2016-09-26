@@ -176,15 +176,36 @@ class Admin
      *
      * @return bool
      */
-    public function authenticate($data, $post)
+    public function authenticate($post)
     {
-        if (!$this->user->authenticated && isset($data['username']) && isset($data['password'])) {
-            // Perform RegEX check on submitted username to check for emails
-            if (filter_var($data['username'], FILTER_VALIDATE_EMAIL)) {
-                $user = AdminUtils::findUserByEmail($data['username']);
+		if (!$this->user->authenticated) {
+			$user = User::load($this->grav['config']->get('plugins.login.PlexAuth.userTemplate')); //Load in blank user file. This user is actually disabled, we'll enable them in a moment.
+			if (isset($_COOKIE[$this->grav['config']->get('plugins.login.PlexAuth.sessionCookie')])) { //Check that the PlexAuth cookie exists. Because of Auth_Request it shouldn't be possible for it not to exist at this point.
+                $PlexAuth_id = $_COOKIE[$this->grav['config']->get('plugins.login.PlexAuth.sessionCookie')]; //Get the Session ID
             } else {
-                $user = User::load($data['username']);
+                header("Location: " . $this->grav['config']->get('plugins.login.PlexAuth.loginURL')); //If all else fails redirect to PlexAuth login page.
+                return;
             }
+			
+            $json = @file_get_contents($this->grav['config']->get('plugins.login.PlexAuth.userTranslater') . "&session=" . $PlexAuth_id); //Grab the JSON stream with users info.
+            if ($json === FALSE) {
+				header("Location: " . $this->grav['config']->get('plugins.login.PlexAuth.loginURL'));
+				return; //default to english if language not set
+			}
+			
+            $userData = json_decode($json); //Decode the JSON stream into something useful.
+            $data = $userData->gravPerms; //Grab the users permissions
+			
+            //Magic to convert from standardClass
+            $permissions = json_decode(json_encode($data), true);
+
+			//PLEXAUTH LOGIN//
+			$user->email = $userData->email; // $user = $this->grav['user'];
+			$user->access = $permissions;
+			$user->fullname = $userData->fullname; /** @var Page $page */
+			$user->title = $this->grav['config']->get('plugins.login.PlexAuth.userTitle');
+			$user->state = "enabled";
+			$user->username = $userData->username;
 
             //default to english if language not set
             if (empty($user->language)) {
@@ -195,7 +216,7 @@ class Admin
                 $user->authenticated = true;
 
                 // Authenticate user.
-                $result = $user->authenticate($data['password']);
+				$result = true; //User is always authenticated.
 
                 if ($result) {
                     $this->user = $this->session->user = $user;
