@@ -1,18 +1,29 @@
 {% embed 'partials/login.html.twig' with {title:'Grav Admin Login'} %}
 
     {% block form %}
-        <div class="form-actions primary-accent">
-            {% if notAuthorized %}
-                <a class="button secondary" onclick="window.history.back()"><i class="fa fa-reply"></i> {{ 'PLUGIN_ADMIN.BACK'|tu }}</a>
+
+        {% if grav.user.username and grav.user.authenticated %}
+
+            <div class="form-actions primary-accent">
                 <button type="submit" class="button primary" name="task" value="logout"><i class="fa fa-sign-in"></i> {{ 'PLUGIN_ADMIN.LOGOUT'|tu }}</button>
-            {% else %}
-                {% if not authenticated %}
-                    <button type="submit" class="button primary" name="task" value="login"><i class="fa fa-sign-in"></i> {{ 'PLUGIN_ADMIN.LOGIN_BTN'|tu }}</button>
-                {% else %}
+            </div>
+
+        {% else %}
+
+            <div class="form-actions primary-accent">
+                {% if notAuthorized %}
+                    <a class="button secondary" onclick="window.history.back()"><i class="fa fa-reply"></i> {{ 'PLUGIN_ADMIN.BACK'|tu }}</a>
                     <button type="submit" class="button primary" name="task" value="logout"><i class="fa fa-sign-in"></i> {{ 'PLUGIN_ADMIN.LOGOUT'|tu }}</button>
+                {% else %}
+                    {% if not authenticated %}
+                        <button type="submit" class="button primary" name="task" value="login"><i class="fa fa-sign-in"></i> {{ 'PLUGIN_ADMIN.LOGIN_BTN'|tu }}</button>
+                    {% else %}
+                        <button type="submit" class="button primary" name="task" value="logout"><i class="fa fa-sign-in"></i> {{ 'PLUGIN_ADMIN.LOGOUT'|tu }}</button>
+                    {% endif %}
                 {% endif %}
-            {% endif %}
-        </div>
+            </div>
+
+        {% endif %}
 
     {% endblock %}
 
