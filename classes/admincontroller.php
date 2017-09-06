@@ -230,15 +230,8 @@ class AdminController extends AdminBaseController
      */
     public function taskDisable()
     {
-<<<<<<< HEAD:classes/controller.php
-        if ($this->admin->authenticate($this->post)) {
-            // should never reach here, redirects first
-        } else {
-            $this->admin->setMessage($this->admin->translate('PLUGIN_ADMIN.LOGIN_FAILED'), 'error');
-=======
         if (!$this->authorizeTask('disable plugin', ['admin.plugins', 'admin.super'])) {
             return false;
->>>>>>> 30ce882ae36586e30b825cd2757b924181ec594d:classes/admincontroller.php
         }
 
         if ($this->view != 'plugins') {
